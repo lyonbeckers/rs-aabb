@@ -1,4 +1,4 @@
-mod agnostic_math;
+pub mod agnostic_math;
 #[cfg(test)]
 mod tests;
 
