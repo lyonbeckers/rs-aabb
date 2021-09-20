@@ -1,4 +1,4 @@
-use nalgebra::{Scalar, Vector3};
+use crate::{NumTraits, Vector3};
 
 pub trait MinMax {
     fn min(self, other: Self) -> Self;
@@ -161,7 +161,7 @@ impl AgnosticAbs for u64 {
 
 pub fn vector_abs<N>(vector: Vector3<N>) -> Vector3<N>
 where
-    N: Scalar + AgnosticAbs + Copy,
+    N: NumTraits + Copy,
 {
-    Vector3::<N>::from_row_slice(&[vector.x.abs(), vector.y.abs(), vector.z.abs()])
+    Vector3::<N>::new(vector.x.abs(), vector.y.abs(), vector.z.abs())
 }
