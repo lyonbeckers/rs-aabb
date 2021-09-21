@@ -79,6 +79,39 @@ where
     }
 }
 
+impl<F> std::ops::Add for Vector3<F>
+where
+    F: PartialEq + NumTraits + Copy + Clone,
+{
+    type Output = Vector3<F>;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Vector3::<F>(self.0 + rhs.0)
+    }
+}
+
+impl<F> std::ops::Sub for Vector3<F>
+where
+    F: PartialEq + NumTraits + Copy + Clone,
+{
+    type Output = Vector3<F>;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Vector3::<F>(self.0 - rhs.0)
+    }
+}
+
+impl<F> std::ops::Div<F> for Vector3<F>
+where
+    F: PartialEq + NumTraits + Copy + Clone,
+{
+    type Output = Vector3<F>;
+
+    fn div(self, rhs: F) -> Self::Output {
+        Vector3(self.0 / rhs)
+    }
+}
+
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
 pub struct Aabb<F>
 where
