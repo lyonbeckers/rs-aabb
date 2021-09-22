@@ -1,17 +1,24 @@
-pub mod agnostic_math;
+mod agnostic_math;
 #[cfg(test)]
 mod tests;
 
-use crate::agnostic_math::{vector_abs, AgnosticAbs, MinMax};
-use nalgebra::Scalar;
-use num::{Num, NumCast, Zero};
+use agnostic_math::{AgnosticAbs, MinMax};
+use nalgebra::{Scalar, Vector3};
+use num::{Num, NumCast};
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::PartialOrd,
-    fmt::Debug,
     iter::Sum,
     ops::{AddAssign, DivAssign, SubAssign},
 };
+
+pub use agnostic_math::vector_abs;
+
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
+pub struct Aabb<F: Scalar> {
+    pub center: Vector3<F>,
+    pub dimensions: Vector3<F>,
+}
 
 pub trait NumTraits:
     Num + Sum + Scalar + NumCast + MinMax + AgnosticAbs + PartialOrd + AddAssign + SubAssign + DivAssign
@@ -29,96 +36,8 @@ impl<T> NumTraits for T where
         + AddAssign
         + SubAssign
         + DivAssign
+        + Copy
 {
-}
-
-#[derive(Serialize, Deserialize, Copy, Clone, Debug)]
-pub struct Vector3<F>(nalgebra::Vector3<F>)
-where
-    F: NumTraits + Debug + Copy + Clone;
-
-impl<F> Vector3<F>
-where
-    F: NumTraits + Debug + Copy + Clone + Zero,
-{
-    pub fn new(x: F, y: F, z: F) -> Self {
-        Self(nalgebra::Vector3::from_row_slice(&[x, y, z]))
-    }
-
-    pub fn zeros() -> Self {
-        Self(nalgebra::Vector3::zeros())
-    }
-}
-
-impl<F> PartialEq for Vector3<F>
-where
-    F: PartialEq + NumTraits + Copy + Clone,
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.0.xyz() == other.0.xyz()
-    }
-}
-
-impl<F> std::ops::Deref for Vector3<F>
-where
-    F: PartialEq + NumTraits + Copy + Clone,
-{
-    type Target = nalgebra::Vector3<F>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<F> std::ops::DerefMut for Vector3<F>
-where
-    F: PartialEq + NumTraits + Copy + Clone,
-{
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl<F> std::ops::Add for Vector3<F>
-where
-    F: PartialEq + NumTraits + Copy + Clone,
-{
-    type Output = Vector3<F>;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Vector3::<F>(self.0 + rhs.0)
-    }
-}
-
-impl<F> std::ops::Sub for Vector3<F>
-where
-    F: PartialEq + NumTraits + Copy + Clone,
-{
-    type Output = Vector3<F>;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        Vector3::<F>(self.0 - rhs.0)
-    }
-}
-
-impl<F> std::ops::Div<F> for Vector3<F>
-where
-    F: PartialEq + NumTraits + Copy + Clone,
-{
-    type Output = Vector3<F>;
-
-    fn div(self, rhs: F) -> Self::Output {
-        Vector3(self.0 / rhs)
-    }
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
-pub struct Aabb<F>
-where
-    F: NumTraits + Copy + Clone,
-{
-    pub center: Vector3<F>,
-    pub dimensions: Vector3<F>,
 }
 
 impl<F: NumTraits + Copy + Clone> Aabb<F> {
@@ -182,10 +101,7 @@ impl<F: NumTraits + Copy + Clone> Aabb<F> {
         max
     }
 
-    fn get_corners<T>(&self) -> [Vector3<T>; 8]
-    where
-        T: nalgebra::SimdRealField + NumTraits + Copy,
-    {
+    fn get_corners<T: nalgebra::SimdRealField + NumCast + Copy>(&self) -> [Vector3<T>; 8] {
         let min = self.get_min();
         let max = self.get_max();
 
@@ -209,15 +125,15 @@ impl<F: NumTraits + Copy + Clone> Aabb<F> {
         ]
     }
 
-    pub fn rotate<T>(&self, rotation: nalgebra::Rotation3<T>) -> Self
-    where
-        T: nalgebra::SimdRealField + NumTraits + Copy,
-    {
+    pub fn rotate<T: nalgebra::SimdRealField + NumCast + Copy>(
+        &self,
+        rotation: nalgebra::Rotation3<T>,
+    ) -> Self {
         let corners = self.get_corners();
 
         let rotated_corners = corners
             .iter()
-            .map(|corner| Vector3(rotation * **corner))
+            .map(|corner| rotation * *corner)
             .collect::<Vec<Vector3<T>>>();
         let mut rotated_corners_iter = rotated_corners.iter();
 
